@@ -6,7 +6,8 @@
 //
 // Past cycles get finalized into boards (they show up in the Scrapbook). The last
 // non-past cycle stays open with its photos sealed, ready for "Generate board now".
-// Photos are dealt round-robin to the seeded friends. Join the group yourself with the printed invite code.
+// Photos are dealt round-robin to the seeded friends (the open cycle skips the last two). Join each group
+// yourself with the printed invite code. Supports the multi-group config format (groups[].theme presets the style).
 
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -49,64 +50,73 @@ const members = [];
 for (const name of config.members) members.push(await ensureUser(name));
 console.log(`✓ ${members.length} friends`);
 
+const groups = config.groups ?? [{ name: config.groupName, cycles: config.cycles }];
 const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const inviteCode = Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
-const { data: group, error: gErr } = await db
-  .from("groups")
-  .insert({ name: config.groupName, invite_code: inviteCode, cycle_length_days: 7, created_by: members[0] })
-  .select()
-  .single();
-if (gErr) throw gErr;
-await db.from("group_members").insert(members.map((user_id) => ({ group_id: group.id, user_id })));
-console.log(`✓ group "${group.name}"`);
+const invites = [];
 
-const past = config.cycles.filter((c) => c.past);
-for (const [i, c] of config.cycles.entries()) {
-  const pastIndex = past.indexOf(c);
-  const startsAt = c.past ? Date.now() - (past.length - pastIndex + 1) * 7 * DAY : Date.now() - 5 * DAY;
-  const endsAt = c.past ? startsAt + 7 * DAY : Date.now() + 2 * DAY;
-
-  const { data: cycle, error } = await db
-    .from("cycles")
-    .insert({
-      group_id: group.id,
-      prompt: c.prompt,
-      starts_at: new Date(startsAt).toISOString(),
-      ends_at: new Date(endsAt).toISOString(),
-    })
+for (const g of groups) {
+  const inviteCode = Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  const { data: group, error: gErr } = await db
+    .from("groups")
+    .insert({ name: g.name, invite_code: inviteCode, cycle_length_days: 7, created_by: members[0] })
     .select()
     .single();
-  if (error) throw error;
+  if (gErr) throw gErr;
+  await db.from("group_members").insert(members.map((user_id) => ({ group_id: group.id, user_id })));
+  console.log(`✓ group "${group.name}"${g.theme ? ` (${g.theme})` : ""}`);
 
-  const files = await listPhotos(c.dir);
-  for (const [j, file] of files.entries()) {
-    const jpg = await sharp(await readFile(file))
-      .rotate()
-      .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
-      .jpeg({ quality: 85 })
-      .toBuffer();
-    const storagePath = `${cycle.id}/${crypto.randomUUID()}.jpg`;
-    const { error: upErr } = await db.storage.from("photos").upload(storagePath, jpg, { contentType: "image/jpeg" });
-    if (upErr) throw upErr;
-    await db.from("photos").insert({
-      cycle_id: cycle.id,
-      user_id: members[j % members.length],
-      storage_path: storagePath,
-      created_at: new Date(startsAt + ((j + 1) / (files.length + 1)) * (Math.min(endsAt, Date.now()) - startsAt)).toISOString(),
-    });
-  }
-  console.log(`✓ cycle ${i + 1}: "${c.prompt}" (${files.length} photos)`);
+  const past = g.cycles.filter((c) => c.past);
+  const posters = members.slice(0, Math.max(1, members.length - 2));
+  for (const [i, c] of g.cycles.entries()) {
+    const pastIndex = past.indexOf(c);
+    const startsAt = c.past ? Date.now() - (past.length - pastIndex + 1) * 7 * DAY : Date.now() - 5 * DAY;
+    const endsAt = c.past ? startsAt + 7 * DAY : Date.now() + 2 * DAY;
 
-  if (c.past) {
-    process.stdout.write("  generating board… ");
-    const res = await fetch(`${APP_URL}/api/cycles/${cycle.id}/finalize`, {
-      method: "POST",
-      headers: { "x-cron-secret": CRON_SECRET, "content-type": "application/json" },
-      body: JSON.stringify({ startNext: false }),
-    });
-    if (!res.ok) throw new Error(`finalize failed: ${res.status} ${await res.text()}`);
-    console.log("done");
+    const { data: cycle, error } = await db
+      .from("cycles")
+      .insert({
+        group_id: group.id,
+        prompt: c.prompt,
+        theme: g.theme ?? null,
+        starts_at: new Date(startsAt).toISOString(),
+        ends_at: new Date(endsAt).toISOString(),
+      })
+      .select()
+      .single();
+    if (error) throw error;
+
+    const files = await listPhotos(c.dir);
+    const who = c.past ? members : posters;
+    for (const [j, file] of files.entries()) {
+      const jpg = await sharp(await readFile(file))
+        .rotate()
+        .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+      const storagePath = `${cycle.id}/${crypto.randomUUID()}.jpg`;
+      const { error: upErr } = await db.storage.from("photos").upload(storagePath, jpg, { contentType: "image/jpeg" });
+      if (upErr) throw upErr;
+      await db.from("photos").insert({
+        cycle_id: cycle.id,
+        user_id: who[j % who.length],
+        storage_path: storagePath,
+        created_at: new Date(startsAt + ((j + 1) / (files.length + 1)) * (Math.min(endsAt, Date.now()) - startsAt)).toISOString(),
+      });
+    }
+    console.log(`  ✓ cycle ${i + 1}: "${c.prompt}" (${files.length} photos)`);
+
+    if (c.past) {
+      process.stdout.write("    generating board… ");
+      const res = await fetch(`${APP_URL}/api/cycles/${cycle.id}/finalize`, {
+        method: "POST",
+        headers: { "x-cron-secret": CRON_SECRET, "content-type": "application/json" },
+        body: JSON.stringify({ startNext: false }),
+      });
+      if (!res.ok) throw new Error(`finalize failed: ${res.status} ${await res.text()}`);
+      console.log("done");
+    }
   }
+  invites.push(`${g.name}: ${inviteCode}   →   ${APP_URL}/join/${inviteCode}`);
 }
 
-console.log(`\nInvite code: ${inviteCode}   →   ${APP_URL}/join/${inviteCode}`);
+console.log(`\nInvite codes:\n${invites.join("\n")}`);

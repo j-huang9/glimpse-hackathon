@@ -27,6 +27,8 @@ export type Cycle = {
   board_url: string | null;
   board_url_landscape: string | null;
   photo_count: number | null;
+  /** Board style ("scrapbook" | "film"). Preset by the demo config, otherwise chosen at reveal. */
+  theme?: "scrapbook" | "film" | null;
   /** Demo mode only: label to use when there's no AI key (set from seed/config.json). */
   demo_vibe_label?: string | null;
 };

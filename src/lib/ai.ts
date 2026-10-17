@@ -84,7 +84,7 @@ export async function generatePrompt(previous: string[] = []): Promise<string> {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-export type Vibe = { vibe_label: string; palette: string[] };
+export type Vibe = { vibe_label: string; palette: string[]; theme?: "scrapbook" | "film" };
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
@@ -95,7 +95,8 @@ function parseVibe(text: string): Vibe | null {
     const v = JSON.parse(json);
     const palette = Array.isArray(v.palette) ? v.palette.filter((c: unknown) => typeof c === "string" && HEX.test(c)) : [];
     if (typeof v.vibe_label !== "string" || !v.vibe_label.trim() || palette.length < 3) return null;
-    return { vibe_label: v.vibe_label.trim().slice(0, 60), palette: palette.slice(0, 5) };
+    const theme = v.theme === "film" || v.theme === "scrapbook" ? v.theme : undefined;
+    return { vibe_label: v.vibe_label.trim().slice(0, 60), palette: palette.slice(0, 5), theme };
   } catch {
     return null;
   }
@@ -120,7 +121,8 @@ export async function analyzeVibe(images: Buffer[], prompt: string): Promise<Vib
         "Be cute and wholesome. Never tease, and never comment on anyone's body or appearance.\n\n" +
         "Reply with only JSON, no prose:\n" +
         '{"vibe_label": "2-5 word aesthetic label in Title Case", "palette": ["#rrggbb", "#rrggbb", "#rrggbb", "#rrggbb", "#rrggbb"]}\n' +
-        "The palette is 5 colors actually drawn from the photos, ordered from lightest to darkest.",
+        "The palette is 5 colors actually drawn from the photos, ordered from lightest to darkest.\n" +
+        'Also add "theme": "film" if the photos feel like a night out, party, or flash photos; otherwise "scrapbook" (cozy, daytime, soft).',
     },
   ];
 

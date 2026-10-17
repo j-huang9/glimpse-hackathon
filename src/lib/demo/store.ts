@@ -34,6 +34,7 @@ const DEFAULTS: Record<string, () => Row> = {
     palette: null,
     board_url: null,
     board_url_landscape: null,
+    theme: null,
     photo_count: null,
     created_at: now(),
   }),

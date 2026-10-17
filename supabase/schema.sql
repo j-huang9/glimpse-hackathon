@@ -39,6 +39,7 @@ create table if not exists cycles (
   palette jsonb,
   board_url text,
   board_url_landscape text,
+  theme text check (theme in ('scrapbook', 'film')),
   photo_count int,
   created_at timestamptz default now()
 );
@@ -83,6 +84,7 @@ create index if not exists board_stickers_cycle on board_stickers (cycle_id);
 
 -- For databases created before these columns existed:
 alter table cycles add column if not exists board_url_landscape text;
+alter table cycles add column if not exists theme text;
 alter table board_stickers add column if not exists orientation text not null default 'portrait';
 
 alter table profiles enable row level security;

@@ -49,11 +49,21 @@ function Settings({ view, refresh }: { view: GroupView; refresh: () => Promise<v
   async function copy() {
     if (navigator.share) {
       await navigator.share({ title: `Join ${group.name} on glimpse`, url: link }).catch(() => {});
-    } else {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      return;
     }
+    // navigator.clipboard only exists on https/localhost; phones on the LAN demo use plain http.
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      const input = document.createElement("textarea");
+      input.value = link;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      input.remove();
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   }
 
   async function setDays(days: number) {

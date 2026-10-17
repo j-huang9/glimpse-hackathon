@@ -6,7 +6,7 @@ import { renderBoard, type Orientation } from "@/lib/board";
 
 /**
  * Dev-only layout preview, no keys needed:
- *   /api/dev/board-preview?n=8&orientation=landscape&label=Cottage%20Brunch%20Girl%20Core
+ *   /api/dev/board-preview?n=8&orientation=landscape&theme=film&label=Cottage%20Brunch%20Girl%20Core
  * Uses photos from seed/photos/current when present, otherwise synthetic gradients.
  */
 export async function GET(req: Request) {
@@ -32,6 +32,7 @@ export async function GET(req: Request) {
   const png = await renderBoard(
     {
       seed: params.get("seed") ?? "preview",
+      theme: params.get("theme") === "film" ? "film" : "scrapbook",
       groupName: "The Roommates",
       startsAt: new Date(Date.now() - 7 * 864e5).toISOString(),
       endsAt: new Date().toISOString(),

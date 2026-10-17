@@ -225,6 +225,16 @@ Based on the team's sketch ("Cottage Brunch Girl Core"):
 
 ---
 
+## 9d. Two board styles (added after interview)
+
+Boards render in one of two styles, inspired by the team's Pinterest references:
+- **scrapbook:** cream paper with grain, overlapping photos in mixed borders (instax, square polaroid, plain, torn) with drop shadows, patterned washi tape, puffy stickers (gingham/striped/flower buttons, heart buttons, metallic stars), marker squiggle/ring/hearts, white paint swipes. Title on a taped paper label, palette on a taped paint-chip card, "xoxo" in marker.
+- **film:** edge-to-edge overlapping photos (no paper showing) with strong shadows and a touch of flash contrast, white paint swipes across seams, yellow marker squiggle/wave/ring/hearts/smiley, "hi!". Title written in black marker on a white paint patch; palette as marker dots on a paint swipe.
+
+The style is stored on the cycle (`cycles.theme`). Demo config presets it per group. Otherwise the AI picks it with the vibe ("film" for night out, party or flash photos; "scrapbook" for cozy or daytime), falling back to a stable per-cycle pick.
+
+---
+
 ## 10. Demo plan
 
 - **Seed:** before judging, create the group "The Roommates" with 4–5 real friend accounts (or seeded profiles). Load a cycle with ~15–20 real photos from friends, all matching one prompt (e.g. "your favorite meal this week").

@@ -15,15 +15,23 @@ While `.env.local` has no real Supabase URL, the app runs in **demo mode**:
 - Data and photos are stored on this machine in `.demo/` instead of Supabase.
 - Google sign-in becomes **"Who are you?"**: pick a demo friend. The floating avatar (bottom right) switches friends or resets the demo.
 - With no `ANTHROPIC_API_KEY`, vibe labels come from `seed/config.json` (`vibeLabel` per cycle) or a built-in list, and the palette is pulled from the photos. Add a key and the real AI takes over.
-- **Set up demo** / **Reset demo data** builds "The Roommates" from `seed/`: past folders become Scrapbook boards, and the open cycle has photos from everyone except the last two friends.
+- **Set up demo** / **Reset demo data** builds two groups from `seed/config.json`, each with a preset board style:
+  - **The Roommates** uses the `scrapbook` style (cream paper, polaroids, buttons, stars, tape). It has 2 past boards in its Scrapbook, and its open cycle uses `seed/photos/current`.
+  - **Prom Night** uses the `film` style (edge-to-edge photos, white paint, yellow marker). Its open cycle uses `seed/photos/night/current`.
+  - In each open cycle, every friend except the last two has already posted.
 
-**For the video:** put your real photos in `seed/photos/past-1`, `past-2`, `current`, and edit names, prompts and labels in `seed/config.json`. Then tap Reset demo data. Suggested flow: pick **Sam** (hasn't posted) → upload a photo and watch the avatar light up → Group tab shows the invite QR → **✨ Generate board now** → reveal → **✨ Decorate** with stickers → switch to **Maya** to see Sam's stickers → **Share board** → Scrapbook.
+**For the video:** put your real photos in those folders, and edit group names, prompts and vibe labels in `seed/config.json`. Then tap Reset demo data. Suggested flow:
+1. Pick **Sam** (hasn't posted). In The Roommates, upload a photo and watch the avatar light up.
+2. Open the Group tab to show the invite QR, then tap **✨ Generate board now**. The scrapbook board is revealed.
+3. Tap **✨ Decorate**, add stickers, and try the Portrait/Landscape toggle.
+4. Switch to **Prom Night** with the group switcher and repeat. This time the film board is revealed.
+5. Switch to **Maya** to see Sam's stickers. Then **Share board**, then the Scrapbook tab.
 
 **Phone demo:**
 - On your laptop: open http://localhost:3000/phone for the app inside an iPhone frame. Good for screen recording.
 - On a real phone: connect it to the same Wi-Fi as the laptop and open `http://<laptop-ip>:3000`. Find the IP with `ipconfig getifaddr en0`.
 
-Board layout preview, no data needed: `/api/dev/board-preview?n=8&orientation=landscape&label=Cottage%20Brunch%20Girl%20Core`
+Board layout preview, no data needed: `/api/dev/board-preview?n=8&theme=film&orientation=landscape&label=Main%20Character%20Night%20Out` (`theme` is `scrapbook` or `film`)
 
 Demo mode is for local recording. On Vercel the filesystem isn't persistent, so use real keys there.
 

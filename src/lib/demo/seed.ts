@@ -15,11 +15,9 @@ function avatar(name: string, i: number) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-type SeedConfig = {
-  groupName: string;
-  members: string[];
-  cycles: { prompt: string; dir: string; past?: boolean; vibeLabel?: string }[];
-};
+type SeedCycle = { prompt: string; dir: string; past?: boolean; vibeLabel?: string };
+type SeedGroup = { name: string; theme?: "scrapbook" | "film"; cycles: SeedCycle[] };
+type SeedConfig = { members: string[]; groups?: SeedGroup[]; groupName?: string; cycles?: SeedCycle[] };
 
 async function listPhotos(dir: string) {
   try {
@@ -33,73 +31,83 @@ async function listPhotos(dir: string) {
 }
 
 /**
- * Wipes demo data and rebuilds it from seed/config.json + seed/photos/*:
- * past cycles become boards in the Scrapbook; the open cycle has photos sealed
- * from everyone except the last two friends (so you can show avatars lighting up).
+ * Wipes demo data and rebuilds it from seed/config.json + seed/photos/*. For each group:
+ * past cycles become boards in the Scrapbook; the open cycle has photos sealed from everyone
+ * except the last two friends (so you can show avatars lighting up). A group's `theme` presets
+ * the board style for all its cycles.
  */
 export async function seedDemo() {
   wipeDemoStore();
   const db = supabaseAdmin();
   const config: SeedConfig = JSON.parse(await readFile(path.join(process.cwd(), "seed/config.json"), "utf8"));
+  const groups: SeedGroup[] = config.groups ?? [{ name: config.groupName ?? "The Roommates", cycles: config.cycles ?? [] }];
 
   const members = config.members.map((name, i) => ({ id: crypto.randomUUID(), display_name: name, avatar_url: avatar(name, i) }));
   await db.from("profiles").insert(members);
-
-  const { data: group } = await db
-    .from("groups")
-    .insert({ name: config.groupName, invite_code: makeInviteCode(), cycle_length_days: 7, created_by: members[0].id })
-    .select()
-    .single<Group>();
-  if (!group) throw new Error("Couldn't create demo group");
-  await db.from("group_members").insert(
-    members.map((m, i) => ({ group_id: group.id, user_id: m.id, joined_at: new Date(Date.now() - 60 * DAY + i * 1000).toISOString() })),
-  );
-
-  const past = config.cycles.filter((c) => c.past);
   const posters = members.slice(0, Math.max(1, members.length - 2));
-  let hasOpenCycle = false;
+  const created: string[] = [];
 
-  for (const c of config.cycles) {
-    const pastIndex = past.indexOf(c);
-    const startsAt = c.past ? Date.now() - (past.length - pastIndex) * 7 * DAY - DAY : Date.now() - 5 * DAY;
-    const endsAt = c.past ? startsAt + 7 * DAY : Date.now() + 2 * DAY;
-
-    const { data: cycle } = await db
-      .from("cycles")
-      .insert({
-        group_id: group.id,
-        prompt: c.prompt,
-        starts_at: new Date(startsAt).toISOString(),
-        ends_at: new Date(endsAt).toISOString(),
-        created_at: new Date(startsAt).toISOString(),
-        demo_vibe_label: c.vibeLabel ?? null,
-      })
+  // Reverse so the first group in the config is the most recently joined (shown first).
+  for (const [gi, g] of [...groups].reverse().entries()) {
+    const { data: group } = await db
+      .from("groups")
+      .insert({ name: g.name, invite_code: makeInviteCode(), cycle_length_days: 7, created_by: members[0].id })
       .select()
-      .single();
+      .single<Group>();
+    if (!group) throw new Error("Couldn't create demo group");
+    created.unshift(group.id);
+    await db.from("group_members").insert(
+      members.map((m, i) => ({
+        group_id: group.id,
+        user_id: m.id,
+        joined_at: new Date(Date.now() - (60 - gi) * DAY + i * 1000).toISOString(),
+      })),
+    );
 
-    const files = await listPhotos(path.join(process.cwd(), c.dir));
-    const who = c.past ? members : posters;
-    for (const [j, file] of files.entries()) {
-      const jpg = await sharp(await readFile(file))
-        .rotate()
-        .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
-        .jpeg({ quality: 85 })
-        .toBuffer();
-      const storagePath = `${cycle.id}/${crypto.randomUUID()}.jpg`;
-      await db.storage.from("photos").upload(storagePath, jpg, { contentType: "image/jpeg" });
-      const t = startsAt + ((j + 1) / (files.length + 1)) * (Math.min(endsAt, Date.now()) - startsAt);
-      await db.from("photos").insert({
-        cycle_id: cycle.id,
-        user_id: who[j % who.length].id,
-        storage_path: storagePath,
-        created_at: new Date(t).toISOString(),
-      });
+    const past = g.cycles.filter((c) => c.past);
+    let hasOpenCycle = false;
+    for (const c of g.cycles) {
+      const pastIndex = past.indexOf(c);
+      const startsAt = c.past ? Date.now() - (past.length - pastIndex) * 7 * DAY - DAY : Date.now() - 5 * DAY;
+      const endsAt = c.past ? startsAt + 7 * DAY : Date.now() + 2 * DAY;
+
+      const { data: cycle } = await db
+        .from("cycles")
+        .insert({
+          group_id: group.id,
+          prompt: c.prompt,
+          starts_at: new Date(startsAt).toISOString(),
+          ends_at: new Date(endsAt).toISOString(),
+          created_at: new Date(startsAt).toISOString(),
+          theme: g.theme ?? null,
+          demo_vibe_label: c.vibeLabel ?? null,
+        })
+        .select()
+        .single();
+
+      const files = await listPhotos(path.join(process.cwd(), c.dir));
+      const who = c.past ? members : posters;
+      for (const [j, file] of files.entries()) {
+        const jpg = await sharp(await readFile(file))
+          .rotate()
+          .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        const storagePath = `${cycle.id}/${crypto.randomUUID()}.jpg`;
+        await db.storage.from("photos").upload(storagePath, jpg, { contentType: "image/jpeg" });
+        const t = startsAt + ((j + 1) / (files.length + 1)) * (Math.min(endsAt, Date.now()) - startsAt);
+        await db.from("photos").insert({
+          cycle_id: cycle.id,
+          user_id: who[j % who.length].id,
+          storage_path: storagePath,
+          created_at: new Date(t).toISOString(),
+        });
+      }
+
+      if (c.past) await finalizeCycle(cycle.id, { startNext: false });
+      else hasOpenCycle = true;
     }
-
-    if (c.past) await finalizeCycle(cycle.id, { startNext: false });
-    else hasOpenCycle = true;
+    if (!hasOpenCycle) await startCycle(group);
   }
-
-  if (!hasOpenCycle) await startCycle(group);
-  return { groupId: group.id, members };
+  return { groupIds: created, members };
 }

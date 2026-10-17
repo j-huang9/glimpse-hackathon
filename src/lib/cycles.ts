@@ -1,7 +1,7 @@
 import "server-only";
 import sharp from "sharp";
 import { analyzeVibe, fallbackVibeLabel, generatePrompt } from "./ai";
-import { renderBoard, type Orientation } from "./board";
+import { renderBoard, THEMES, type Orientation, type Theme } from "./board";
 import { supabaseAdmin } from "./supabase-admin";
 import type { Cycle, Group } from "./types";
 
@@ -158,8 +158,11 @@ export async function finalizeCycle(cycleId: string, { startNext = true } = {}) 
         palette: await fallbackPalette(small),
       };
 
+      // A preset theme (demo config) wins; otherwise the AI's pick; otherwise a stable random one.
+      const theme: Theme = cycle.theme ?? vibe.theme ?? THEMES[parseInt(cycleId.slice(0, 2), 16) % THEMES.length];
       const boardInput = {
         seed: cycleId,
+        theme,
         groupName: group.name,
         startsAt: cycle.starts_at,
         endsAt,
@@ -188,6 +191,7 @@ export async function finalizeCycle(cycleId: string, { startNext = true } = {}) 
         .update({
           status: "revealed",
           vibe_label: vibe.vibe_label,
+          theme,
           palette: vibe.palette,
           board_url: portraitUrl,
           board_url_landscape: landscapeUrl,
