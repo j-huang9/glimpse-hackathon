@@ -25,6 +25,7 @@ export type Cycle = {
   vibe_label: string | null;
   palette: string[] | null;
   board_url: string | null;
+  board_url_landscape: string | null;
   photo_count: number | null;
   /** Demo mode only: label to use when there's no AI key (set from seed/config.json). */
   demo_vibe_label?: string | null;

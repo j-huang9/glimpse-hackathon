@@ -2,8 +2,7 @@
 
 import { stickerById, type PlacedSticker } from "./stickers";
 
-const W = 1080;
-const H = 1920;
+const SIZE = { portrait: { W: 1080, H: 1920 }, landscape: { W: 1920, H: 1080 } };
 
 function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -15,8 +14,13 @@ function loadImage(src: string) {
   });
 }
 
-/** Flattens the board PNG + placed stickers into one 1080×1920 PNG. */
-export async function composeBoard(boardUrl: string, stickers: PlacedSticker[]): Promise<Blob> {
+/** Flattens the board PNG + placed stickers into one PNG (1080×1920 portrait or 1920×1080 landscape). */
+export async function composeBoard(
+  boardUrl: string,
+  stickers: PlacedSticker[],
+  orientation: keyof typeof SIZE = "portrait",
+): Promise<Blob> {
+  const { W, H } = SIZE[orientation];
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -41,8 +45,13 @@ export async function composeBoard(boardUrl: string, stickers: PlacedSticker[]):
 }
 
 /** Native share sheet on phones (straight to IG stories / group chat), download elsewhere. */
-export async function shareBoard(boardUrl: string, stickers: PlacedSticker[], name = "glimpse-board") {
-  const blob = await composeBoard(boardUrl, stickers);
+export async function shareBoard(
+  boardUrl: string,
+  stickers: PlacedSticker[],
+  name = "glimpse-board",
+  orientation: keyof typeof SIZE = "portrait",
+) {
+  const blob = await composeBoard(boardUrl, stickers, orientation);
   const file = new File([blob], `${name}.png`, { type: "image/png" });
   if (navigator.canShare?.({ files: [file] })) {
     try {

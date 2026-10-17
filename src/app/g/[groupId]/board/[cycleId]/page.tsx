@@ -33,7 +33,7 @@ export default function BoardPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{formatRange(cycle.starts_at, cycle.ends_at)}</p>
             <h1 className="font-serif text-4xl leading-tight">{cycle.vibe_label}</h1>
           </div>
-          <BoardEditor cycleId={cycle.id} boardUrl={cycle.board_url!} me={session.user.id} editable shareName="glimpse-board" />
+          <BoardEditor cycleId={cycle.id} boardUrl={cycle.board_url!} boardUrlLandscape={cycle.board_url_landscape} me={session.user.id} editable shareName="glimpse-board" />
         </div>
       )}
     </Shell>

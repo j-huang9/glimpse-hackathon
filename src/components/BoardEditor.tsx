@@ -6,9 +6,21 @@ import { api } from "@/lib/client";
 import { shareBoard } from "@/lib/share";
 import { STICKERS, stickerById, type PlacedSticker } from "@/lib/stickers";
 
+type Orientation = "portrait" | "landscape";
+const ORIENTATION_KEY = "glimpse:board-orientation";
+
+function savedOrientation(): Orientation {
+  try {
+    return localStorage.getItem(ORIENTATION_KEY) === "landscape" ? "landscape" : "portrait";
+  } catch {
+    return "portrait";
+  }
+}
+
 type Props = {
   cycleId: string;
   boardUrl: string;
+  boardUrlLandscape?: string | null;
   me: string;
   editable?: boolean;
   shareName?: string;
@@ -43,8 +55,12 @@ function twoFingers(points: Map<number, Point>) {
  * Everyone sees every sticker; you can only move/resize/remove the ones you placed.
  * Gestures: drag to move; with a sticker selected, pinch to resize and twist to rotate.
  */
-export function BoardEditor({ cycleId, boardUrl, me, editable = false, shareName }: Props) {
-  const [stickers, setStickers] = useState<PlacedSticker[]>([]);
+export function BoardEditor({ cycleId, boardUrl, boardUrlLandscape, me, editable = false, shareName }: Props) {
+  const [orientation, setOrientationState] = useState<Orientation>(() => (boardUrlLandscape ? savedOrientation() : "portrait"));
+  const [allStickers, setStickers] = useState<PlacedSticker[]>([]);
+  // Each orientation is its own canvas, so stickers belong to the one they were placed on.
+  const stickers = allStickers.filter((s) => (s.orientation ?? "portrait") === orientation);
+  const src = orientation === "landscape" && boardUrlLandscape ? boardUrlLandscape : boardUrl;
   const [selected, setSelected] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,11 +69,11 @@ export function BoardEditor({ cycleId, boardUrl, me, editable = false, shareName
   const gesture = useRef<Gesture | null>(null);
   const emptyTap = useRef(false);
   const pending = useRef(0);
-  const latest = useRef(stickers);
+  const latest = useRef<PlacedSticker[]>([]);
 
   useEffect(() => {
-    latest.current = stickers;
-  }, [stickers]);
+    latest.current = allStickers.filter((s) => (s.orientation ?? "portrait") === orientation);
+  }, [allStickers, orientation]);
 
   const load = useCallback(async () => {
     if (gesture.current || pending.current > 0) return;
@@ -99,7 +115,7 @@ export function BoardEditor({ cycleId, boardUrl, me, editable = false, shareName
     const r = await save(
       api<{ sticker: PlacedSticker }>(`/api/cycles/${cycleId}/stickers`, {
         method: "POST",
-        body: JSON.stringify({ stickerId, ...randomPlacement(def.kind) }),
+        body: JSON.stringify({ stickerId, orientation, ...randomPlacement(def.kind) }),
       }),
     );
     if (r) {
@@ -195,7 +211,7 @@ export function BoardEditor({ cycleId, boardUrl, me, editable = false, shareName
     setSharing(true);
     setError(null);
     try {
-      await shareBoard(boardUrl, latest.current, shareName);
+      await shareBoard(src, latest.current, `${shareName ?? "glimpse-board"}-${orientation}`, orientation);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -205,8 +221,37 @@ export function BoardEditor({ cycleId, boardUrl, me, editable = false, shareName
 
   const sel = stickers.find((s) => s.id === selected && s.user_id === me);
 
+  function setOrientation(o: Orientation) {
+    setOrientationState(o);
+    setSelected(null);
+    try {
+      localStorage.setItem(ORIENTATION_KEY, o);
+    } catch {}
+  }
+
   return (
     <div className="flex flex-col gap-4">
+      {boardUrlLandscape && (
+        <div className="flex self-center rounded-full border border-line bg-white/70 p-1 backdrop-blur" role="radiogroup" aria-label="Board orientation">
+          {(["portrait", "landscape"] as const).map((o) => (
+            <button
+              key={o}
+              role="radio"
+              aria-checked={orientation === o}
+              onClick={() => setOrientation(o)}
+              className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                orientation === o ? "bg-ink text-white" : "text-muted"
+              }`}
+            >
+              <span
+                aria-hidden
+                className={`inline-block rounded-[3px] border-2 border-current ${o === "portrait" ? "h-3.5 w-2.5" : "h-2.5 w-3.5"}`}
+              />
+              {o === "portrait" ? "Portrait" : "Landscape"}
+            </button>
+          ))}
+        </div>
+      )}
       <div
         ref={boxRef}
         onPointerDown={onPointerDown}
@@ -214,9 +259,9 @@ export function BoardEditor({ cycleId, boardUrl, me, editable = false, shareName
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         className={`relative w-full select-none overflow-hidden rounded-3xl shadow-2xl shadow-black/15 ${editable ? "touch-none" : ""}`}
-        style={{ aspectRatio: "9 / 16" }}
+        style={{ aspectRatio: orientation === "portrait" ? "9 / 16" : "16 / 9" }}
       >
-        <img src={boardUrl} alt="This cycle's moodboard" className="absolute inset-0 size-full" draggable={false} />
+        <img src={src} alt="This cycle's moodboard" className="absolute inset-0 size-full" draggable={false} />
         {stickers.map((s) => {
           const def = stickerById(s.sticker_id);
           if (!def) return null;

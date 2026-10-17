@@ -1,11 +1,13 @@
 import "server-only";
 import sharp from "sharp";
 import { analyzeVibe, fallbackVibeLabel, generatePrompt } from "./ai";
-import { renderBoard } from "./board";
+import { renderBoard, type Orientation } from "./board";
 import { supabaseAdmin } from "./supabase-admin";
 import type { Cycle, Group } from "./types";
 
-const MAX_BOARD_PHOTOS = 30;
+const MAX_AI_PHOTOS = 30;
+// A scattered scrapbook page gets cluttered past this; the AI still sees up to 30.
+const MAX_BOARD_PHOTOS = 16;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function startCycle(group: Group): Promise<Cycle> {
@@ -45,7 +47,7 @@ export async function startCycle(group: Group): Promise<Cycle> {
 type PhotoRow = { id: string; user_id: string; storage_path: string; created_at: string };
 
 /** Up to `max` photos, at least one per contributor, the rest spread evenly across the cycle. */
-export function samplePhotos(photos: PhotoRow[], max = MAX_BOARD_PHOTOS): PhotoRow[] {
+export function samplePhotos(photos: PhotoRow[], max: number): PhotoRow[] {
   if (photos.length <= max) return photos;
   const picked = new Set<string>();
   const firstByUser = new Map<string, PhotoRow>();
@@ -136,7 +138,8 @@ export async function finalizeCycle(cycleId: string, { startNext = true } = {}) 
     if (all.length === 0) {
       await db.from("cycles").update({ status: "empty", photo_count: 0, ends_at: endsAt }).eq("id", cycleId);
     } else {
-      const sample = samplePhotos(all);
+      const sample = samplePhotos(all, MAX_AI_PHOTOS);
+      const onBoard = new Set(samplePhotos(sample, MAX_BOARD_PHOTOS).map((p) => p.id));
       const buffers = await Promise.all(
         sample.map(async (p) => {
           const { data, error } = await db.storage.from("photos").download(p.storage_path);
@@ -155,22 +158,30 @@ export async function finalizeCycle(cycleId: string, { startNext = true } = {}) 
         palette: await fallbackPalette(small),
       };
 
-      const png = await renderBoard({
+      const boardInput = {
+        seed: cycleId,
         groupName: group.name,
         startsAt: cycle.starts_at,
         endsAt,
         vibeLabel: vibe.vibe_label,
         palette: vibe.palette,
-        photos: buffers,
-        hiddenCount: all.length - sample.length,
-      });
+        photos: buffers.filter((_, i) => onBoard.has(sample[i].id)),
+        hiddenCount: all.length - onBoard.size,
+      };
 
-      const path = `${cycleId}.png`;
-      const { error: upErr } = await db.storage
-        .from("boards")
-        .upload(path, png, { contentType: "image/png", upsert: true });
-      if (upErr) throw upErr;
-      const { data: pub } = db.storage.from("boards").getPublicUrl(path);
+      // Render and store both orientations up front so the toggle is instant.
+      const version = Date.now();
+      const [portraitUrl, landscapeUrl] = await Promise.all(
+        (["portrait", "landscape"] as Orientation[]).map(async (orientation) => {
+          const png = await renderBoard(boardInput, orientation);
+          const path = orientation === "portrait" ? `${cycleId}.png` : `${cycleId}-landscape.png`;
+          const { error: upErr } = await db.storage
+            .from("boards")
+            .upload(path, png, { contentType: "image/png", upsert: true });
+          if (upErr) throw upErr;
+          return `${db.storage.from("boards").getPublicUrl(path).data.publicUrl}?v=${version}`;
+        }),
+      );
 
       await db
         .from("cycles")
@@ -178,7 +189,8 @@ export async function finalizeCycle(cycleId: string, { startNext = true } = {}) 
           status: "revealed",
           vibe_label: vibe.vibe_label,
           palette: vibe.palette,
-          board_url: `${pub.publicUrl}?v=${Date.now()}`,
+          board_url: portraitUrl,
+          board_url_landscape: landscapeUrl,
           photo_count: all.length,
           ends_at: endsAt,
         })

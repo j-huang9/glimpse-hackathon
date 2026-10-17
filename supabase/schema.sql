@@ -38,6 +38,7 @@ create table if not exists cycles (
   vibe_label text,
   palette jsonb,
   board_url text,
+  board_url_landscape text,
   photo_count int,
   created_at timestamptz default now()
 );
@@ -75,9 +76,14 @@ create table if not exists board_stickers (
   y real not null default 0.5,
   scale real not null default 0.22,
   rotation real not null default 0,
+  orientation text not null default 'portrait' check (orientation in ('portrait', 'landscape')),
   created_at timestamptz default now()
 );
 create index if not exists board_stickers_cycle on board_stickers (cycle_id);
+
+-- For databases created before these columns existed:
+alter table cycles add column if not exists board_url_landscape text;
+alter table board_stickers add column if not exists orientation text not null default 'portrait';
 
 alter table profiles enable row level security;
 alter table groups enable row level security;

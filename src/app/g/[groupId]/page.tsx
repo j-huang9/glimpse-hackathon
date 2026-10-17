@@ -202,7 +202,7 @@ function LatestBoard({ cycle, me, groupName }: { cycle: Cycle; me: string; group
           ✨ Decorate
         </Link>
       </div>
-      <BoardEditor cycleId={cycle.id} boardUrl={cycle.board_url!} me={me} shareName={slug(groupName)} />
+      <BoardEditor cycleId={cycle.id} boardUrl={cycle.board_url!} boardUrlLandscape={cycle.board_url_landscape} me={me} shareName={slug(groupName)} />
     </div>
   );
 }

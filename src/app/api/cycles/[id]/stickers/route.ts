@@ -39,6 +39,7 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/cycles/[id]
         y: clamp(body.y ?? 0.5, 0, 1),
         scale: clamp(body.scale ?? 0.22, 0.06, 0.8),
         rotation: Number(body.rotation ?? 0) || 0,
+        orientation: body.orientation === "landscape" ? "landscape" : "portrait",
       })
       .select()
       .single();

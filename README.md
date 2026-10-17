@@ -19,6 +19,12 @@ While `.env.local` has no real Supabase URL, the app runs in **demo mode**:
 
 **For the video:** put your real photos in `seed/photos/past-1`, `past-2`, `current`, and edit names, prompts and labels in `seed/config.json`. Then tap Reset demo data. Suggested flow: pick **Sam** (hasn't posted) → upload a photo and watch the avatar light up → Group tab shows the invite QR → **✨ Generate board now** → reveal → **✨ Decorate** with stickers → switch to **Maya** to see Sam's stickers → **Share board** → Scrapbook.
 
+**Phone demo:**
+- On your laptop: open http://localhost:3000/phone for the app inside an iPhone frame. Good for screen recording.
+- On a real phone: connect it to the same Wi-Fi as the laptop and open `http://<laptop-ip>:3000`. Find the IP with `ipconfig getifaddr en0`.
+
+Board layout preview, no data needed: `/api/dev/board-preview?n=8&orientation=landscape&label=Cottage%20Brunch%20Girl%20Core`
+
 Demo mode is for local recording. On Vercel the filesystem isn't persistent, so use real keys there.
 
 ## Setup with real services (≈10 min)
@@ -55,7 +61,7 @@ npm run dev     # http://localhost:3000
 ```
 > The folder name contains `:`, which breaks npm's PATH handling, so the scripts call Next's binary directly. Use `npm run …`, not `npx next …`.
 
-Dev-only layout preview, no keys needed: http://localhost:3000/api/dev/board-preview?n=12
+Dev-only layout preview, no keys needed: http://localhost:3000/api/dev/board-preview?n=8 (add `&orientation=landscape`)
 
 ## Demo seed
 1. Drop real photos into `seed/photos/past-1`, `past-2`, `current` (and edit prompts/names in `seed/config.json`).

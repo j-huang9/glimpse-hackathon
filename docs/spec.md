@@ -213,6 +213,18 @@ After a board is revealed, members can decorate it with **hand-drawn stickers an
 
 ---
 
+## 9c. Scrapbook board design + orientation (added after interview)
+
+Based on the team's sketch ("Cottage Brunch Girl Core"):
+- **Handwritten vibe title** (Caveat) at the top, with group name and dates underneath.
+- **Photos scattered at alternating tilts**, overlapping slightly, each in a rotating frame style: polaroid, double-line, scalloped (with a bow), and taped (washi tape in a palette color).
+- **Ink doodles** in the palette's text color: stars and hearts pinned to photo corners, plus a heart, sparkle, smiley and "xoxo" around the page. Palette shows as outlined color dots in the footer (no hex codes).
+- The board shows up to **16 photos** (at least one per contributor, "+N more" noted); the AI still sees up to 30.
+- Layout is seeded by cycle id, so a board always renders the same.
+- **Portrait (1080×1920) and landscape (1920×1080)** are both rendered at reveal (`board_url`, `board_url_landscape`). A Portrait/Landscape toggle on the board switches instantly and is remembered per device. Stickers belong to the orientation they were placed on (`board_stickers.orientation`), and Share exports the current orientation.
+
+---
+
 ## 10. Demo plan
 
 - **Seed:** before judging, create the group "The Roommates" with 4–5 real friend accounts (or seeded profiles). Load a cycle with ~15–20 real photos from friends, all matching one prompt (e.g. "your favorite meal this week").

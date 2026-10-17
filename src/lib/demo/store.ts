@@ -33,12 +33,13 @@ const DEFAULTS: Record<string, () => Row> = {
     vibe_label: null,
     palette: null,
     board_url: null,
+    board_url_landscape: null,
     photo_count: null,
     created_at: now(),
   }),
   photos: () => ({ id: uuid(), created_at: now() }),
   prompt_reports: () => ({ id: uuid(), reason: null, created_at: now() }),
-  board_stickers: () => ({ id: uuid(), x: 0.5, y: 0.5, scale: 0.22, rotation: 0, created_at: now() }),
+  board_stickers: () => ({ id: uuid(), x: 0.5, y: 0.5, scale: 0.22, rotation: 0, orientation: "portrait", created_at: now() }),
 };
 
 const PRIMARY_KEY: Record<string, string[]> = { group_members: ["group_id", "user_id"] };

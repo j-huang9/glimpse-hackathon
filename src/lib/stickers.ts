@@ -31,4 +31,5 @@ export type PlacedSticker = {
   y: number; // center, fraction of board height
   scale: number; // sticker width as fraction of board width
   rotation: number; // degrees
+  orientation: "portrait" | "landscape"; // stickers belong to one orientation of the board
 };
