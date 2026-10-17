@@ -117,8 +117,11 @@ export async function seedDemo() {
     let hasOpenCycle = false;
     for (const c of g.cycles) {
       const pastIndex = past.indexOf(c);
-      const startsAt = c.past ? Date.now() - (past.length - pastIndex) * 7 * DAY - DAY : Date.now() - 5 * DAY;
-      const endsAt = c.past ? startsAt + 7 * DAY : Date.now() + 2 * DAY;
+      // The open cycle started 5 days ago; past cycles end back-to-back before it, so they read as
+      // older boards (Scrapbook only) rather than "just revealed" on the Now page.
+      const openStart = Date.now() - 5 * DAY;
+      const endsAt = c.past ? openStart - (past.length - 1 - pastIndex) * 7 * DAY : Date.now() + 2 * DAY;
+      const startsAt = c.past ? endsAt - 7 * DAY : openStart;
 
       // In the open cycle, whoever uploads live on camera hasn't posted yet.
       const files = await assignPhotos(path.join(process.cwd(), c.dir), members, c.past ? members : posters, c.past ? new Set() : notYetPosted);

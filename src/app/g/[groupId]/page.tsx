@@ -42,8 +42,10 @@ export default function GroupPage() {
 function GroupHome({ view, refresh }: { view: GroupView; refresh: () => Promise<void> }) {
   const { current, latest } = view;
   const [dismissed, setDismissed] = useState<string[]>([]);
+  // "Now" is about the current cycle: only a just-revealed board shows here; older ones live in the Scrapbook.
+  const recent = latest && isRecent(latest.ends_at);
   const revealing =
-    latest?.status === "revealed" && !dismissed.includes(latest.id) && !seenBoards().includes(latest.id) ? latest : null;
+    recent && latest.status === "revealed" && !dismissed.includes(latest.id) && !seenBoards().includes(latest.id) ? latest : null;
 
   function dismissReveal() {
     if (!revealing) return;
@@ -53,7 +55,6 @@ function GroupHome({ view, refresh }: { view: GroupView; refresh: () => Promise<
     setDismissed((d) => [...d, revealing.id]);
   }
 
-  const recent = latest && isRecent(latest.ends_at);
   const board = latest?.status === "revealed" && <LatestBoard cycle={latest} me={view.me} groupName={view.group.name} />;
   const quiet = latest?.status === "empty" && recent && (
     <Card className="text-center">
@@ -72,12 +73,6 @@ function GroupHome({ view, refresh }: { view: GroupView; refresh: () => Promise<
         </Card>
       ) : (
         current && <PromptCard view={view} refresh={refresh} />
-      )}
-      {!recent && board && (
-        <>
-          <h2 className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Last board</h2>
-          {board}
-        </>
       )}
     </div>
   );
