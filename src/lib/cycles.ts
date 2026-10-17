@@ -1,6 +1,6 @@
 import "server-only";
 import sharp from "sharp";
-import { analyzeVibe, generatePrompt } from "./ai";
+import { analyzeVibe, fallbackVibeLabel, generatePrompt } from "./ai";
 import { renderBoard } from "./board";
 import { supabaseAdmin } from "./supabase-admin";
 import type { Cycle, Group } from "./types";
@@ -63,23 +63,47 @@ function toHex(r: number, g: number, b: number) {
   return "#" + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
 }
 
-function lightness(hex: string) {
-  const n = parseInt(hex.slice(1), 16);
-  return ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114;
+
+type RGB = [number, number, number];
+
+function saturation([r, g, b]: RGB) {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  return max === 0 ? 0 : (max - min) / max;
 }
 
-/** Used when the AI call fails: dominant colors of a few photos, light → dark. */
+const mix = (c: RGB, t: number): RGB => c.map((v) => v + (255 - v) * t) as RGB;
+const distance = (a: RGB, b: RGB) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+/**
+ * Used when there's no AI (demo mode) or the call fails: sample a grid of colors from the photos,
+ * keep the colorful mid-tones, pick 5 that are far apart, order light → dark, and soften the
+ * two lightest so the board background stays airy.
+ */
 async function fallbackPalette(images: Buffer[]): Promise<string[]> {
-  const colors = await Promise.all(
-    images.slice(0, 8).map(async (img) => {
-      const { dominant } = await sharp(img).stats();
-      return toHex(dominant.r, dominant.g, dominant.b);
-    }),
-  );
-  const unique = [...new Set(colors)];
-  const defaults = ["#fdf2e9", "#f6c9a8", "#e8998d", "#a26769", "#582c4d"];
-  while (unique.length < 5) unique.push(defaults[unique.length]);
-  return unique.slice(0, 5).sort((a, b) => lightness(b) - lightness(a));
+  const pool: RGB[] = [];
+  for (const img of images.slice(0, 16)) {
+    const { data } = await sharp(img).resize(4, 4, { fit: "fill" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    for (let i = 0; i < data.length; i += 3) pool.push([data[i], data[i + 1], data[i + 2]]);
+  }
+  const lum = ([r, g, b]: RGB) => r * 0.299 + g * 0.587 + b * 0.114;
+  const colorful = pool.filter((c) => lum(c) > 45 && lum(c) < 235 && saturation(c) > 0.18);
+  const candidates = colorful.length >= 5 ? colorful : pool;
+
+  // Farthest-point sampling, starting from the most saturated color.
+  const picked: RGB[] = [candidates.reduce((a, b) => (saturation(b) > saturation(a) ? b : a))];
+  while (picked.length < 5 && picked.length < candidates.length) {
+    picked.push(candidates.reduce((best, c) =>
+      Math.min(...picked.map((p) => distance(p, c))) > Math.min(...picked.map((p) => distance(p, best))) ? c : best,
+    ));
+  }
+  const defaults: RGB[] = [[253, 242, 233], [246, 201, 168], [232, 153, 141], [162, 103, 105], [88, 44, 77]];
+  while (picked.length < 5) picked.push(defaults[picked.length]);
+
+  const sorted = picked.sort((a, b) => lum(b) - lum(a));
+  sorted[0] = mix(sorted[0], 0.75);
+  sorted[1] = mix(sorted[1], 0.5);
+  return sorted.map(([r, g, b]) => toHex(r, g, b));
 }
 
 /**
@@ -127,7 +151,7 @@ export async function finalizeCycle(cycleId: string, { startNext = true } = {}) 
       );
 
       const vibe = (await analyzeVibe(small, cycle.prompt)) ?? {
-        vibe_label: "Main Character Energy",
+        vibe_label: cycle.demo_vibe_label ?? fallbackVibeLabel(),
         palette: await fallbackPalette(small),
       };
 

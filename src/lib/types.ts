@@ -26,6 +26,8 @@ export type Cycle = {
   palette: string[] | null;
   board_url: string | null;
   photo_count: number | null;
+  /** Demo mode only: label to use when there's no AI key (set from seed/config.json). */
+  demo_vibe_label?: string | null;
 };
 
 export type GroupView = {

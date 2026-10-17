@@ -32,6 +32,24 @@ const FALLBACK_PROMPTS = [
   "something golden",
 ];
 
+/** Used when there's no API key (demo mode) or the model fails. */
+const FALLBACK_LABELS = [
+  "Main Character Golden Hour",
+  "Soft Chaos Picnic Era",
+  "Cozy Cottagecore Brunch Club",
+  "Sunday Reset Energy",
+  "Postcard From Everywhere",
+  "Little Treat Culture",
+  "Slow Morning Society",
+  "Windows Down Summer",
+];
+
+export function fallbackVibeLabel() {
+  return FALLBACK_LABELS[Math.floor(Math.random() * FALLBACK_LABELS.length)];
+}
+
+const hasKey = () => !!process.env.ANTHROPIC_API_KEY;
+
 function textOf(msg: Anthropic.Message) {
   return msg.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
@@ -44,7 +62,7 @@ export async function generatePrompt(previous: string[] = []): Promise<string> {
   const avoid = previous.length
     ? `\n\nRecent prompts this group already had (don't repeat these themes):\n${previous.map((p) => `- ${p}`).join("\n")}`
     : "";
-  try {
+  if (hasKey()) try {
     const msg = await anthropic().messages.create({
       model: MODEL,
       max_tokens: 60,
@@ -85,6 +103,7 @@ function parseVibe(text: string): Vibe | null {
 
 /** One multimodal call over all (downscaled) photos. Returns null if the model fails twice. */
 export async function analyzeVibe(images: Buffer[], prompt: string): Promise<Vibe | null> {
+  if (!hasKey()) return null;
   const content: Anthropic.ContentBlockParam[] = [
     ...images.map(
       (buf): Anthropic.ImageBlockParam => ({

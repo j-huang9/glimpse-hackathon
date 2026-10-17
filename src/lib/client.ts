@@ -2,12 +2,50 @@
 
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { IS_DEMO } from "./demo-flag";
 import { supabaseBrowser } from "./supabase-browser";
+
+export type DemoUser = { id: string; display_name: string; avatar_url: string | null };
+const DEMO_USER_KEY = "glimpse:demo-user";
+const DEMO_EVENT = "glimpse:demo-user-changed";
+
+export function getDemoUser(): DemoUser | null {
+  try {
+    return JSON.parse(localStorage.getItem(DEMO_USER_KEY) ?? "null");
+  } catch {
+    return null;
+  }
+}
+
+export function setDemoUser(user: DemoUser | null) {
+  try {
+    if (user) localStorage.setItem(DEMO_USER_KEY, JSON.stringify(user));
+    else localStorage.removeItem(DEMO_USER_KEY);
+  } catch {}
+  window.dispatchEvent(new Event(DEMO_EVENT));
+}
+
+function demoSession(u: DemoUser | null): Session | null {
+  if (!u) return null;
+  return {
+    access_token: u.id,
+    user: { id: u.id, user_metadata: { full_name: u.display_name, avatar_url: u.avatar_url } },
+  } as unknown as Session;
+}
 
 /** undefined = still loading, null = signed out */
 export function useSession() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   useEffect(() => {
+    if (IS_DEMO) {
+      const sync = () => setSession(demoSession(getDemoUser()));
+      const first = setTimeout(sync, 0);
+      window.addEventListener(DEMO_EVENT, sync);
+      return () => {
+        clearTimeout(first);
+        window.removeEventListener(DEMO_EVENT, sync);
+      };
+    }
     const sb = supabaseBrowser();
     sb.auth.getSession().then(({ data }) => setSession(data.session));
     const { data } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
@@ -23,10 +61,21 @@ export function signInWithGoogle() {
   });
 }
 
-export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+export function signOut() {
+  if (IS_DEMO) setDemoUser(null);
+  else supabaseBrowser().auth.signOut();
+}
+
+async function accessToken() {
+  if (IS_DEMO) return getDemoUser()?.id ?? null;
   const { data } = await supabaseBrowser().auth.getSession();
+  return data.session?.access_token ?? null;
+}
+
+export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+  const token = await accessToken();
   const headers = new Headers(init.headers);
-  if (data.session) headers.set("authorization", `Bearer ${data.session.access_token}`);
+  if (token) headers.set("authorization", `Bearer ${token}`);
   if (init.body && !(init.body instanceof FormData)) headers.set("content-type", "application/json");
   const res = await fetch(path, { ...init, headers });
   const json = await res.json().catch(() => ({}));

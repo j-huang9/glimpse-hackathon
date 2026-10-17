@@ -1,9 +1,23 @@
 {
   "groupName": "The Roommates",
-  "members": ["Maya", "Jordan", "Priya", "Sam"],
+  "members": ["Maya", "Jordan", "Priya", "Sam", "Alex"],
   "cycles": [
-    { "prompt": "the most chaotic thing in your fridge", "dir": "seed/photos/past-1", "past": true },
-    { "prompt": "a sky that made you stop walking", "dir": "seed/photos/past-2", "past": true },
-    { "prompt": "the best thing you ate this week", "dir": "seed/photos/current" }
+    {
+      "prompt": "your view right now",
+      "dir": "seed/photos/past-1",
+      "past": true,
+      "vibeLabel": "Window Seat Wanderers"
+    },
+    {
+      "prompt": "somewhere you wandered this week",
+      "dir": "seed/photos/past-2",
+      "past": true,
+      "vibeLabel": "Postcard From Everywhere"
+    },
+    {
+      "prompt": "the prettiest thing you saw this week",
+      "dir": "seed/photos/current",
+      "vibeLabel": "Main Character Golden Hour"
+    }
   ]
 }

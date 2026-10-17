@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { signInWithGoogle, useSession } from "@/lib/client";
+import { IS_DEMO } from "@/lib/demo-flag";
+import { DemoSignIn, DemoSwitcher } from "./Demo";
 
 /** Page frame: palette-tinted background blobs, mobile-width column, and a sign-in gate. */
 export function Shell({
@@ -20,6 +22,7 @@ export function Shell({
       <main className="mx-auto w-full max-w-md px-4 pb-16 pt-5">
         {!requireAuth ? children : session === undefined ? <Spinner /> : session ? children : <SignIn />}
       </main>
+      {IS_DEMO && session && <DemoSwitcher />}
     </div>
   );
 }
@@ -46,12 +49,16 @@ function SignIn() {
           of what you were all up to.
         </p>
       </div>
+      {IS_DEMO ? (
+        <DemoSignIn />
+      ) : (
       <button
         onClick={() => signInWithGoogle()}
         className="flex h-14 items-center justify-center gap-3 rounded-2xl bg-ink text-[16px] font-medium text-white shadow-lg shadow-black/10 transition active:scale-[0.98]"
       >
         <GoogleIcon /> Continue with Google
       </button>
+      )}
     </div>
   );
 }

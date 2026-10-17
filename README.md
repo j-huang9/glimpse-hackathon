@@ -4,7 +4,24 @@ One AI prompt per cycle. Friends share real photos, hidden until the end. Then t
 
 Spec: [`docs/spec.md`](docs/spec.md)
 
-## Setup (≈10 min)
+## Demo mode (no keys needed)
+
+```
+npm install
+npm run dev     # http://localhost:3000
+```
+
+While `.env.local` has no real Supabase URL, the app runs in **demo mode**:
+- Data and photos are stored on this machine in `.demo/` instead of Supabase.
+- Google sign-in becomes **"Who are you?"**: pick a demo friend. The floating avatar (bottom right) switches friends or resets the demo.
+- With no `ANTHROPIC_API_KEY`, vibe labels come from `seed/config.json` (`vibeLabel` per cycle) or a built-in list, and the palette is pulled from the photos. Add a key and the real AI takes over.
+- **Set up demo** / **Reset demo data** builds "The Roommates" from `seed/`: past folders become Scrapbook boards, and the open cycle has photos from everyone except the last two friends.
+
+**For the video:** put your real photos in `seed/photos/past-1`, `past-2`, `current`, and edit names, prompts and labels in `seed/config.json`. Then tap Reset demo data. Suggested flow: pick **Sam** (hasn't posted) → upload a photo and watch the avatar light up → Group tab shows the invite QR → **✨ Generate board now** → reveal → **✨ Decorate** with stickers → switch to **Maya** to see Sam's stickers → **Share board** → Scrapbook.
+
+Demo mode is for local recording. On Vercel the filesystem isn't persistent, so use real keys there.
+
+## Setup with real services (≈10 min)
 
 ### 1. Supabase
 1. Create a project at https://supabase.com/dashboard (free tier is fine).

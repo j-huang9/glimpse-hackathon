@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card, Shell, Spinner } from "@/components/Shell";
-import { api, useSession } from "@/lib/client";
-import { supabaseBrowser } from "@/lib/supabase-browser";
+import { api, signOut, useSession } from "@/lib/client";
 
 type GroupLite = { id: string; name: string };
 
@@ -30,7 +29,7 @@ function Groups() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <span className="font-serif text-2xl">glimpse</span>
-        <button onClick={() => supabaseBrowser().auth.signOut()} className="text-sm text-muted">Sign out</button>
+        <button onClick={signOut} className="text-sm text-muted">Sign out</button>
       </div>
       <h1 className="font-serif text-4xl leading-tight">{first ? `Hi ${first},` : "Hi,"} who are we catching up with?</h1>
 
