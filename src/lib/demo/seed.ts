@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
@@ -13,6 +14,12 @@ const AVATAR_COLORS = ["#ffc8b4", "#c9b8ff", "#b8e3c9", "#ffe29a", "#a9d4ff", "#
 function avatar(name: string, i: number) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="${AVATAR_COLORS[i % AVATAR_COLORS.length]}"/><text x="48" y="62" text-anchor="middle" font-family="Georgia, serif" font-size="44" fill="#1c1917">${name[0]}</text></svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+/** Same name → same id on every reset, so a browser's remembered demo user stays signed in. */
+function stableId(name: string) {
+  const h = createHash("sha256").update(`glimpse-demo:${name}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
 
 type SeedCycle = { prompt: string; dir: string; past?: boolean; vibeLabel?: string };
@@ -42,7 +49,7 @@ export async function seedDemo() {
   const config: SeedConfig = JSON.parse(await readFile(path.join(process.cwd(), "seed/config.json"), "utf8"));
   const groups: SeedGroup[] = config.groups ?? [{ name: config.groupName ?? "The Roommates", cycles: config.cycles ?? [] }];
 
-  const members = config.members.map((name, i) => ({ id: crypto.randomUUID(), display_name: name, avatar_url: avatar(name, i) }));
+  const members = config.members.map((name, i) => ({ id: stableId(name), display_name: name, avatar_url: avatar(name, i) }));
   await db.from("profiles").insert(members);
   const posters = members.slice(0, Math.max(1, members.length - 2));
   const created: string[] = [];
@@ -51,7 +58,7 @@ export async function seedDemo() {
   for (const [gi, g] of [...groups].reverse().entries()) {
     const { data: group } = await db
       .from("groups")
-      .insert({ name: g.name, invite_code: makeInviteCode(), cycle_length_days: 7, created_by: members[0].id })
+      .insert({ id: stableId(`group:${g.name}`), name: g.name, invite_code: makeInviteCode(), cycle_length_days: 7, created_by: members[0].id })
       .select()
       .single<Group>();
     if (!group) throw new Error("Couldn't create demo group");

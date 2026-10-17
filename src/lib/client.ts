@@ -78,6 +78,8 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
   if (token) headers.set("authorization", `Bearer ${token}`);
   if (init.body && !(init.body instanceof FormData)) headers.set("content-type", "application/json");
   const res = await fetch(path, { ...init, headers });
+  // Demo data was reset and this friend no longer exists: back to "Who are you?".
+  if (res.status === 401 && IS_DEMO && token) setDemoUser(null);
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error ?? `Request failed (${res.status})`);
   return json as T;
