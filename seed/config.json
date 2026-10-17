@@ -1,46 +1,28 @@
 {
-  "members": [
-    "Maya",
-    "Jordan",
-    "Priya",
-    "Sam",
-    "Alex"
-  ],
-  "presenter": "Sam",
+  "members": ["Claire", "Stephanie", "Jane", "Jenna"],
+  "presenter": "Jenna",
   "groups": [
     {
-      "name": "The Roommates",
+      "name": "diversatouse",
       "theme": "scrapbook",
       "cycles": [
         {
-          "prompt": "your view right now",
-          "dir": "seed/photos/past-1",
+          "prompt": "what happened at bass lake?",
+          "dir": "seed/photos/diversatouse/bass-lake",
           "past": true,
-          "vibeLabel": "Window Seat Wanderers"
+          "vibeLabel": "what happens in bass lake..."
         },
         {
-          "prompt": "somewhere you wandered this week",
-          "dir": "seed/photos/past-2",
-          "past": true,
-          "vibeLabel": "Postcard From Everywhere"
-        },
-        {
-          "prompt": "the prettiest thing you saw this week",
-          "dir": "seed/photos/current",
-          "vibeLabel": "Cottage Brunch Girl Core"
+          "prompt": "where you went this summer?",
+          "dir": "seed/photos/diversatouse/current",
+          "vibeLabel": "postcards from:"
         }
       ]
     },
     {
-      "name": "Prom Night",
-      "theme": "film",
-      "cycles": [
-        {
-          "prompt": "your favorite moment from tonight",
-          "dir": "seed/photos/night/current",
-          "vibeLabel": "Main Character Night Out"
-        }
-      ]
+      "name": "hometown friends",
+      "theme": "scrapbook",
+      "cycles": []
     }
   ]
 }

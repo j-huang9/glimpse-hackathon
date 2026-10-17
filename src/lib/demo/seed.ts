@@ -120,6 +120,11 @@ export async function seedDemo() {
       const startsAt = c.past ? Date.now() - (past.length - pastIndex) * 7 * DAY - DAY : Date.now() - 5 * DAY;
       const endsAt = c.past ? startsAt + 7 * DAY : Date.now() + 2 * DAY;
 
+      // In the open cycle, whoever uploads live on camera hasn't posted yet.
+      const files = await assignPhotos(path.join(process.cwd(), c.dir), members, c.past ? members : posters, c.past ? new Set() : notYetPosted);
+      // A past board with no photos yet would only show up as an empty "quiet week": leave it out.
+      if (c.past && files.length === 0) continue;
+
       const { data: cycle } = await db
         .from("cycles")
         .insert({
@@ -134,8 +139,6 @@ export async function seedDemo() {
         .select()
         .single();
 
-      // In the open cycle, whoever uploads live on camera hasn't posted yet.
-      const files = await assignPhotos(path.join(process.cwd(), c.dir), members, c.past ? members : posters, c.past ? new Set() : notYetPosted);
       for (const [j, { member, file }] of files.entries()) {
         const jpg = await sharp(await readFile(file))
           .rotate()
