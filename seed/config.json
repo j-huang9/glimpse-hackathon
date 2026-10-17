@@ -1,0 +1,9 @@
+{
+  "groupName": "The Roommates",
+  "members": ["Maya", "Jordan", "Priya", "Sam"],
+  "cycles": [
+    { "prompt": "the most chaotic thing in your fridge", "dir": "seed/photos/past-1", "past": true },
+    { "prompt": "a sky that made you stop walking", "dir": "seed/photos/past-2", "past": true },
+    { "prompt": "the best thing you ate this week", "dir": "seed/photos/current" }
+  ]
+}
