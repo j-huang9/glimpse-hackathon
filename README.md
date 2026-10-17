@@ -88,9 +88,9 @@ Each image is trimmed to its drawn edges, shrunk to at most 600px, and saved as 
 
 **Manual way:** copy transparent PNGs straight into `public/stickers/`.
 
-Naming:
-- Filenames that start with `stamp` go in the **Stamps** row. Everything else goes in **Stickers**.
-- The tray label comes from the filename: `stamp-best-friends.png` shows as "Best Friends".
+Naming and order:
+- **Tray order** comes from `public/stickers/order.json`: a list of filenames without the extension. Files that aren't listed go at the end, alphabetically. Names listed without a file yet (like `heart`, `drink`) are skipped until the file shows up.
+- The tray label comes from the filename: `stamp-best-friends.png` shows as "Best Friends". Filenames starting with `stamp` only get a larger default size when placed.
 - Renaming or deleting a file removes it from boards where someone already placed it.
 
 Use transparent backgrounds. The import command warns you if an image has none.

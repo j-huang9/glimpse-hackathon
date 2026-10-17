@@ -306,27 +306,24 @@ export function BoardEditor({ cycleId, boardUrl, boardUrlLandscape, me, editable
             <ToolButton label="Remove" onClick={() => sel && remove(sel.id)}>✕</ToolButton>
           </div>
 
-          {(["sticker", "stamp"] as const).filter((kind) => catalog.some((s) => s.kind === kind)).map((kind) => (
-            <div key={kind}>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                {kind === "sticker" ? "Stickers" : "Stamps"}
-              </p>
-              <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-                {catalog.filter((s) => s.kind === kind).map((s) => (
+          {catalog.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Stickers</p>
+              <div className="grid grid-cols-4 gap-2">
+                {catalog.map((s) => (
                   <button
                     key={s.id}
                     onClick={() => add(s.id)}
                     aria-label={`Add ${s.label}`}
-                    className={`flex h-20 shrink-0 items-center justify-center rounded-2xl border border-line bg-white/80 p-2 transition active:scale-95 ${
-                      kind === "stamp" ? "w-32" : "w-20"
-                    }`}
+                    title={s.label}
+                    className="flex aspect-square items-center justify-center rounded-2xl border border-line bg-white/80 p-2 transition active:scale-95"
                   >
                     <img src={s.src} alt="" className="max-h-full max-w-full" draggable={false} />
                   </button>
                 ))}
               </div>
             </div>
-          ))}
+          )}
           <p className="text-center text-xs text-muted">
             Tap to add · drag to move · pinch or twist to resize and rotate · friends see your stickers too
           </p>

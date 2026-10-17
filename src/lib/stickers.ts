@@ -1,7 +1,7 @@
 /**
  * Sticker + stamp types. The catalog itself is whatever images are in public/stickers/
  * (see sticker-catalog.ts): drop in a transparent PNG and it shows up in the tray.
- * Filenames starting with "stamp" go in the Stamps row; everything else is a Sticker.
+ * Order comes from public/stickers/order.json; "stamp…" files just get a larger default size.
  */
 export type StickerDef = { id: string; src: string; label: string; aspect: number; kind: "sticker" | "stamp" };
 

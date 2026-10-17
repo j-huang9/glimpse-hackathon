@@ -5,7 +5,7 @@
 //   npm run stickers -- ~/Desktop/our-stickers --replace  (also removes the placeholder art)
 //
 // Each image is trimmed to its drawn edges, shrunk to at most 600px, and saved as
-// public/stickers/<name>.png. Filenames containing "stamp" land in the Stamps row.
+// public/stickers/<name>.png. Tray order is set in public/stickers/order.json.
 // New stickers show up in the Decorate tray right away (no restart).
 
 import { readdir, rm, stat } from "node:fs/promises";
