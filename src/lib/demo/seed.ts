@@ -11,7 +11,20 @@ import { wipeDemoStore } from "./store";
 const DAY = 86_400_000;
 const AVATAR_COLORS = ["#ffc8b4", "#c9b8ff", "#b8e3c9", "#ffe29a", "#a9d4ff", "#ffb3c7"];
 
-function avatar(name: string, i: number) {
+/** seed/avatars/<Name>.jpg|png|webp if present (any case), otherwise a pastel initial. */
+async function avatar(name: string, i: number) {
+  const dir = path.join(process.cwd(), "seed/avatars");
+  const file = (await readdir(dir).catch(() => [] as string[])).find(
+    (f) => /\.(jpe?g|png|webp|heic)$/i.test(f) && f.replace(/\.\w+$/, "").toLowerCase() === name.toLowerCase(),
+  );
+  if (file) {
+    try {
+      const jpg = await sharp(path.join(dir, file)).rotate().resize(192, 192, { fit: "cover", position: sharp.strategy.attention }).jpeg({ quality: 82 }).toBuffer();
+      return `data:image/jpeg;base64,${jpg.toString("base64")}`;
+    } catch {
+      /* unreadable file: fall through to initials */
+    }
+  }
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="${AVATAR_COLORS[i % AVATAR_COLORS.length]}"/><text x="48" y="62" text-anchor="middle" font-family="Georgia, serif" font-size="44" fill="#1c1917">${name[0]}</text></svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
@@ -24,17 +37,42 @@ function stableId(name: string) {
 
 type SeedCycle = { prompt: string; dir: string; past?: boolean; vibeLabel?: string };
 type SeedGroup = { name: string; theme?: "scrapbook" | "film"; cycles: SeedCycle[] };
-type SeedConfig = { members: string[]; groups?: SeedGroup[]; groupName?: string; cycles?: SeedCycle[] };
+type SeedConfig = {
+  members: string[];
+  /** Who uploads live on camera: starts with no photos in open cycles. Defaults to the last two members. */
+  presenter?: string;
+  groups?: SeedGroup[];
+  groupName?: string;
+  cycles?: SeedCycle[];
+};
+type Member = { id: string; display_name: string; avatar_url: string };
 
-async function listPhotos(dir: string) {
-  try {
-    return (await readdir(dir))
-      .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
-      .sort()
-      .map((f) => path.join(dir, f));
-  } catch {
-    return [];
+const isPhoto = (f: string) => /\.(jpe?g|png|webp)$/i.test(f);
+
+/**
+ * Photos in a cycle folder, each paired with who posted it:
+ *   <dir>/Maya/*.jpg → Maya's photos;  loose files in <dir> → dealt round-robin to `fallback`.
+ * Returned in an interleaved order so posting times mix across friends.
+ */
+async function assignPhotos(dir: string, members: Member[], fallback: Member[], skip: Set<string>) {
+  const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+  const byPerson: { member: Member; file: string }[][] = [];
+  const loose = entries.filter((e) => e.isFile() && isPhoto(e.name)).map((e) => path.join(dir, e.name)).sort();
+  loose.forEach((file, j) => {
+    const member = fallback[j % fallback.length];
+    (byPerson[j % fallback.length] ??= []).push({ member, file });
+  });
+  for (const e of entries.filter((e) => e.isDirectory())) {
+    const member = members.find((m) => m.display_name.toLowerCase() === e.name.toLowerCase());
+    if (!member || skip.has(member.id)) continue;
+    const files = (await readdir(path.join(dir, e.name))).filter(isPhoto).sort();
+    byPerson.push(files.map((f) => ({ member, file: path.join(dir, e.name, f) })));
   }
+  const out: { member: Member; file: string }[] = [];
+  for (let k = 0; byPerson.some((list) => list && k < list.length); k++) {
+    for (const list of byPerson) if (list?.[k]) out.push(list[k]);
+  }
+  return out;
 }
 
 /**
@@ -49,9 +87,13 @@ export async function seedDemo() {
   const config: SeedConfig = JSON.parse(await readFile(path.join(process.cwd(), "seed/config.json"), "utf8"));
   const groups: SeedGroup[] = config.groups ?? [{ name: config.groupName ?? "The Roommates", cycles: config.cycles ?? [] }];
 
-  const members = config.members.map((name, i) => ({ id: stableId(name), display_name: name, avatar_url: avatar(name, i) }));
+  const members: Member[] = await Promise.all(
+    config.members.map(async (name, i) => ({ id: stableId(name), display_name: name, avatar_url: await avatar(name, i) })),
+  );
   await db.from("profiles").insert(members);
-  const posters = members.slice(0, Math.max(1, members.length - 2));
+  const presenter = members.find((m) => m.display_name.toLowerCase() === config.presenter?.toLowerCase());
+  const posters = presenter ? members.filter((m) => m !== presenter) : members.slice(0, Math.max(1, members.length - 2));
+  const notYetPosted = new Set(members.filter((m) => !posters.includes(m)).map((m) => m.id));
   const created: string[] = [];
 
   // Reverse so the first group in the config is the most recently joined (shown first).
@@ -92,9 +134,9 @@ export async function seedDemo() {
         .select()
         .single();
 
-      const files = await listPhotos(path.join(process.cwd(), c.dir));
-      const who = c.past ? members : posters;
-      for (const [j, file] of files.entries()) {
+      // In the open cycle, whoever uploads live on camera hasn't posted yet.
+      const files = await assignPhotos(path.join(process.cwd(), c.dir), members, c.past ? members : posters, c.past ? new Set() : notYetPosted);
+      for (const [j, { member, file }] of files.entries()) {
         const jpg = await sharp(await readFile(file))
           .rotate()
           .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
@@ -105,7 +147,7 @@ export async function seedDemo() {
         const t = startsAt + ((j + 1) / (files.length + 1)) * (Math.min(endsAt, Date.now()) - startsAt);
         await db.from("photos").insert({
           cycle_id: cycle.id,
-          user_id: who[j % who.length].id,
+          user_id: member.id,
           storage_path: storagePath,
           created_at: new Date(t).toISOString(),
         });

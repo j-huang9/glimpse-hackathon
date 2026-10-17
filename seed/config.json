@@ -1,20 +1,45 @@
 {
-  "members": ["Maya", "Jordan", "Priya", "Sam", "Alex"],
+  "members": [
+    "Maya",
+    "Jordan",
+    "Priya",
+    "Sam",
+    "Alex"
+  ],
+  "presenter": "Sam",
   "groups": [
     {
       "name": "The Roommates",
       "theme": "scrapbook",
       "cycles": [
-        { "prompt": "your view right now", "dir": "seed/photos/past-1", "past": true, "vibeLabel": "Window Seat Wanderers" },
-        { "prompt": "somewhere you wandered this week", "dir": "seed/photos/past-2", "past": true, "vibeLabel": "Postcard From Everywhere" },
-        { "prompt": "the prettiest thing you saw this week", "dir": "seed/photos/current", "vibeLabel": "Cottage Brunch Girl Core" }
+        {
+          "prompt": "your view right now",
+          "dir": "seed/photos/past-1",
+          "past": true,
+          "vibeLabel": "Window Seat Wanderers"
+        },
+        {
+          "prompt": "somewhere you wandered this week",
+          "dir": "seed/photos/past-2",
+          "past": true,
+          "vibeLabel": "Postcard From Everywhere"
+        },
+        {
+          "prompt": "the prettiest thing you saw this week",
+          "dir": "seed/photos/current",
+          "vibeLabel": "Cottage Brunch Girl Core"
+        }
       ]
     },
     {
       "name": "Prom Night",
       "theme": "film",
       "cycles": [
-        { "prompt": "your favorite moment from tonight", "dir": "seed/photos/night/current", "vibeLabel": "Main Character Night Out" }
+        {
+          "prompt": "your favorite moment from tonight",
+          "dir": "seed/photos/night/current",
+          "vibeLabel": "Main Character Night Out"
+        }
       ]
     }
   ]

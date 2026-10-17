@@ -20,7 +20,29 @@ While `.env.local` has no real Supabase URL, the app runs in **demo mode**:
   - **Prom Night** uses the `film` style (edge-to-edge photos, white paint, yellow marker). Its open cycle uses `seed/photos/night/current`.
   - In each open cycle, every friend except the last two has already posted.
 
-**For the video:** put your real photos in those folders, and edit group names, prompts and vibe labels in `seed/config.json`. Then tap Reset demo data. Suggested flow:
+**For the video:** everything is set in `seed/config.json`. After editing it, tap **Reset demo data** (avatar menu, bottom right) to rebuild.
+
+```jsonc
+{
+  "members": ["Maya", "Jordan", "Priya", "Sam", "Alex"],   // friend names, in display order
+  "presenter": "Sam",                                       // uploads live on camera; starts with no photos
+  "groups": [
+    {
+      "name": "The Roommates",                              // group name
+      "theme": "scrapbook",                                 // "scrapbook" or "film"
+      "cycles": [
+        { "prompt": "…", "dir": "seed/photos/past-1", "past": true, "vibeLabel": "…" },  // becomes a Scrapbook board
+        { "prompt": "the prettiest thing you saw this week",                            // the live prompt
+          "dir": "seed/photos/current", "vibeLabel": "Cottage Brunch Girl Core" }        // label revealed on camera
+      ]
+    }
+  ]
+}
+```
+
+- **Photos:** a subfolder named after a friend holds that friend's photos (`seed/photos/current/Maya/*.jpg`). Loose photos in the folder are shared out among everyone except the presenter.
+- **Profile pictures:** `seed/avatars/<Name>.jpg` (or .png). Friends without one get a pastel initial. These photos stay out of git.
+- **The presenter's photos:** keep them on the device you're recording with and upload them on camera. They're added to the same board. Suggested flow:
 1. Pick **Sam** (hasn't posted). In The Roommates, upload a photo and watch the avatar light up.
 2. Open the Group tab to show the invite QR, then tap **✨ Generate board now**. The scrapbook board is revealed.
 3. Tap **✨ Decorate**, add stickers, and try the Portrait/Landscape toggle.

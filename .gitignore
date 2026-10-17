@@ -45,3 +45,5 @@ seed/photos/*/*
 
 # demo mode data
 /.demo/
+seed/avatars/*
+!seed/avatars/.gitkeep
