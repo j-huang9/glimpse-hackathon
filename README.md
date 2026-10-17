@@ -77,9 +77,23 @@ Dev-only layout preview, no keys needed: http://localhost:3000/api/dev/board-pre
 3. Open the printed invite link, join, then go to **Group → ✨ Generate board now** on stage.
 
 ## Your own stickers
-1. Export each drawing as a transparent PNG (≈400–800px wide) into `public/stickers/`.
-2. Add a line to `src/lib/stickers.ts`: `{ id, src, label, aspect: height/width, kind: "sticker" | "stamp" }`.
-3. Delete placeholder entries you don't want. Don't rename ids of stickers already placed on boards.
+The Decorate tray shows every image in `public/stickers/`. You don't need to edit any code.
+
+**Easiest way:** put your PNGs in a folder and run:
+```
+npm run stickers -- ~/Desktop/our-stickers            # add them
+npm run stickers -- ~/Desktop/our-stickers --replace  # add them and remove the placeholder art
+```
+Each image is trimmed to its drawn edges, shrunk to at most 600px, and saved as `public/stickers/<name>.png`. Refresh the Decorate page and they appear.
+
+**Manual way:** copy transparent PNGs straight into `public/stickers/`.
+
+Naming:
+- Filenames that start with `stamp` go in the **Stamps** row. Everything else goes in **Stickers**.
+- The tray label comes from the filename: `stamp-best-friends.png` shows as "Best Friends".
+- Renaming or deleting a file removes it from boards where someone already placed it.
+
+Use transparent backgrounds. The import command warns you if an image has none.
 
 ## Deploy (Vercel)
 Import the repo, add the same env vars (with `APP_URL` = your Vercel URL), and add the Vercel URL to Supabase redirect URLs. Optional: enable `pg_cron` + `pg_net` and run the commented cron block at the bottom of `supabase/schema.sql` so boards reveal on time even if nobody opens the app. Otherwise the reveal happens the first time anyone opens the group after the timer ends.

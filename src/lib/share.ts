@@ -1,6 +1,6 @@
 "use client";
 
-import { stickerById, type PlacedSticker } from "./stickers";
+import type { PlacedSticker, StickerDef } from "./stickers";
 
 const SIZE = { portrait: { W: 1080, H: 1920 }, landscape: { W: 1920, H: 1080 } };
 
@@ -18,6 +18,7 @@ function loadImage(src: string) {
 export async function composeBoard(
   boardUrl: string,
   stickers: PlacedSticker[],
+  catalog: StickerDef[],
   orientation: keyof typeof SIZE = "portrait",
 ): Promise<Blob> {
   const { W, H } = SIZE[orientation];
@@ -28,7 +29,7 @@ export async function composeBoard(
   ctx.drawImage(await loadImage(boardUrl), 0, 0, W, H);
 
   for (const s of stickers) {
-    const def = stickerById(s.sticker_id);
+    const def = catalog.find((d) => d.id === s.sticker_id);
     if (!def) continue;
     const img = await loadImage(def.src);
     const w = s.scale * W;
@@ -48,10 +49,11 @@ export async function composeBoard(
 export async function shareBoard(
   boardUrl: string,
   stickers: PlacedSticker[],
+  catalog: StickerDef[],
   name = "glimpse-board",
   orientation: keyof typeof SIZE = "portrait",
 ) {
-  const blob = await composeBoard(boardUrl, stickers, orientation);
+  const blob = await composeBoard(boardUrl, stickers, catalog, orientation);
   const file = new File([blob], `${name}.png`, { type: "image/png" });
   if (navigator.canShare?.({ files: [file] })) {
     try {

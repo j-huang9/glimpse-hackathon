@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/client";
 import { shareBoard } from "@/lib/share";
-import { STICKERS, stickerById, type PlacedSticker } from "@/lib/stickers";
+import type { PlacedSticker, StickerDef } from "@/lib/stickers";
 
 type Orientation = "portrait" | "landscape";
 const ORIENTATION_KEY = "glimpse:board-orientation";
@@ -58,6 +58,8 @@ function twoFingers(points: Map<number, Point>) {
 export function BoardEditor({ cycleId, boardUrl, boardUrlLandscape, me, editable = false, shareName }: Props) {
   const [orientation, setOrientationState] = useState<Orientation>(() => (boardUrlLandscape ? savedOrientation() : "portrait"));
   const [allStickers, setStickers] = useState<PlacedSticker[]>([]);
+  const [catalog, setCatalog] = useState<StickerDef[]>([]);
+  const stickerById = (id: string) => catalog.find((d) => d.id === id);
   // Each orientation is its own canvas, so stickers belong to the one they were placed on.
   const stickers = allStickers.filter((s) => (s.orientation ?? "portrait") === orientation);
   const src = orientation === "landscape" && boardUrlLandscape ? boardUrlLandscape : boardUrl;
@@ -84,6 +86,13 @@ export function BoardEditor({ cycleId, boardUrl, boardUrlLandscape, me, editable
       /* keep what we have */
     }
   }, [cycleId]);
+
+  useEffect(() => {
+    fetch("/api/stickers/catalog")
+      .then((r) => r.json())
+      .then((r) => setCatalog(r.stickers ?? []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const first = setTimeout(load, 0);
@@ -211,7 +220,7 @@ export function BoardEditor({ cycleId, boardUrl, boardUrlLandscape, me, editable
     setSharing(true);
     setError(null);
     try {
-      await shareBoard(src, latest.current, `${shareName ?? "glimpse-board"}-${orientation}`, orientation);
+      await shareBoard(src, latest.current, catalog, `${shareName ?? "glimpse-board"}-${orientation}`, orientation);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -297,13 +306,13 @@ export function BoardEditor({ cycleId, boardUrl, boardUrlLandscape, me, editable
             <ToolButton label="Remove" onClick={() => sel && remove(sel.id)}>✕</ToolButton>
           </div>
 
-          {(["sticker", "stamp"] as const).map((kind) => (
+          {(["sticker", "stamp"] as const).filter((kind) => catalog.some((s) => s.kind === kind)).map((kind) => (
             <div key={kind}>
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
                 {kind === "sticker" ? "Stickers" : "Stamps"}
               </p>
               <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-                {STICKERS.filter((s) => s.kind === kind).map((s) => (
+                {catalog.filter((s) => s.kind === kind).map((s) => (
                   <button
                     key={s.id}
                     onClick={() => add(s.id)}

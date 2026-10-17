@@ -1,6 +1,6 @@
 import { connection, type NextRequest } from "next/server";
 import { errorResponse, HttpError, requireCycleMember, requireUser } from "@/lib/auth";
-import { STICKER_IDS } from "@/lib/stickers";
+import { listStickers } from "@/lib/sticker-catalog";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export async function GET(req: NextRequest, ctx: RouteContext<"/api/cycles/[id]/stickers">) {
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/cycles/[id]
     if (cycle.status !== "revealed") throw new HttpError(409, "Stickers go on revealed boards");
 
     const body = await req.json();
-    if (!STICKER_IDS.has(body.stickerId)) throw new HttpError(400, "Unknown sticker");
+    if (!(await listStickers()).some((s) => s.id === body.stickerId)) throw new HttpError(400, "Unknown sticker");
     const { data, error } = await supabaseAdmin()
       .from("board_stickers")
       .insert({
